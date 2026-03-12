@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from core.job import Job
-from core.battler import Battler
+from core.enums.job import Job
+from core.entities.battler import Battler
 
 @dataclass
 class Character(Battler):

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from core.item_type import ItemType
-from core.job import Job
+from core.enums.item_type import ItemType
+from core.enums.job import Job
 
 @dataclass
 class Item:

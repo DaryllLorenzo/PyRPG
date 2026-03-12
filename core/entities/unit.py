@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from core.battler import Battler
-from core.unit_type import UnitType
+from core.entities.battler import Battler
+from core.enums.unit_type import UnitType
 
 @dataclass
 class Unit(Battler):
