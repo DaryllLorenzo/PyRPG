@@ -29,13 +29,14 @@ PyRPG/
 | `core/enums/battle_action_type.py` | Action types (Attack, Skill, Item, Flee) |
 | `core/items/item.py` | Equippable items with stats |
 | `core/combat/battle_action.py` | Battle action dataclass |
+| `core/combat/battle_result.py` | Result of a completed battle |
+| `core/combat/battle_system.py` | Main combat loop |
+| `core/combat/damage_calculator.py` | Damage formulas |
 
 **Missing:**
 
 | File | Description |
 |------|-------------|
-| `core/combat/battle_system.py` | Main combat loop |
-| `core/combat/damage_calculator.py` | Damage formulas |
 | `core/combat/status_effect.py` | Status effects (Poison, Sleep, etc.) |
 | `core/entities/party.py` | Player party management |
 | `core/entities/enemy_party.py` | Enemy group management |
