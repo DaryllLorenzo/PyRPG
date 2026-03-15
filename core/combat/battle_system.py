@@ -97,7 +97,7 @@ class BattleSystem:
             return current_battler
 
         action = self._determine_action(current_battler)
-        self._execute_action(action)
+        self._execute_action(action, current_battler)
 
         if self._check_battle_end():
             self._is_running = False
@@ -183,7 +183,7 @@ class BattleSystem:
         target = available_targets[0]
         return BattleAction(action_type=BattleActionType.ATTACK, target=target)
 
-    def _execute_action(self, action: BattleAction) -> None:
+    def _execute_action(self, action: BattleAction, attacker: Battler) -> None:
         """
         Execute a battle action.
 
@@ -195,17 +195,18 @@ class BattleSystem:
 
         Args:
             action: The BattleAction to execute
+            attacker: The battler performing the action
         """
         if action.action_type == BattleActionType.ATTACK:
-            self._execute_attack(action)
+            self._execute_attack(action, attacker)
         elif action.action_type == BattleActionType.SKILL:
             pass
         elif action.action_type == BattleActionType.ITEM:
-            self._execute_item_use(action)
+            self._execute_item_use(action, attacker)
         elif action.action_type == BattleActionType.FLEE:
-            self._execute_flee(action)
+            self._execute_flee(action, attacker)
 
-    def _execute_attack(self, action: BattleAction) -> None:
+    def _execute_attack(self, action: BattleAction, attacker: Battler) -> None:
         """
         Execute a physical attack action.
 
@@ -213,12 +214,9 @@ class BattleSystem:
 
         Args:
             action: BattleAction with ATTACK type and valid target
+            attacker: The battler performing the attack
         """
         if action.target is None or self._is_defeated(action.target):
-            return
-
-        attacker = self._get_action_owner(action)
-        if attacker is None:
             return
 
         damage = DamageCalculator.calculate_physical_damage(attacker, action.target)
@@ -226,7 +224,7 @@ class BattleSystem:
 
         self._on_damage_dealt(attacker, action.target, damage)
 
-    def _execute_item_use(self, action: BattleAction) -> None:
+    def _execute_item_use(self, action: BattleAction, user: Battler) -> None:
         """
         Execute an item use action.
 
@@ -234,12 +232,9 @@ class BattleSystem:
 
         Args:
             action: BattleAction with ITEM type and valid item
+            user: The battler using the item
         """
         if action.item is None:
-            return
-
-        user = self._get_action_owner(action)
-        if user is None:
             return
 
         target = action.target if action.target else user
@@ -248,7 +243,7 @@ class BattleSystem:
             heal_amount = action.item.stats["hp"]
             target.hp = min(target.hp + heal_amount, target.hp + heal_amount)
 
-    def _execute_flee(self, action: BattleAction) -> None:
+    def _execute_flee(self, action: BattleAction, battler: Battler) -> None:
         """
         Execute a flee action.
 
@@ -256,8 +251,9 @@ class BattleSystem:
 
         Args:
             action: BattleAction with FLEE type
+            battler: The battler attempting to flee
         """
-        if action.target in self.party:
+        if battler in self.party:
             self._is_running = False
 
     def _get_action_owner(self, action: BattleAction) -> Optional[Battler]:
