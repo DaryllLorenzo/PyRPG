@@ -41,13 +41,28 @@ PyRPG/
 | File | Description |
 |------|-------------|
 | `core/combat/status_effect.py` | Status effects (Poison, Sleep, etc.) |
-| `core/entities/party.py` | Player party management |
-| `core/entities/enemy_party.py` | Enemy group management |
 | `core/items/inventory.py` | Inventory management |
 
 ### Tests
 
-Empty. Pending implementation.
+**Implemented:**
+
+| File | Description |
+|------|-------------|
+| `tests/test_entities.py` | Tests for Battler, Character, Unit |
+| `tests/test_combat.py` | Tests for BattleAction, DamageCalculator |
+| `tests/test_party.py` | Tests for Party class |
+| `tests/test_battle_flow.py` | Integration tests for complete battle flow |
+| `tests/test_progression.py` | Tests for Skill, Experience |
+| `tests/test_items.py` | Tests for Item class |
+| `tests/test_enums.py` | Tests for enum types |
+
+**Missing:**
+
+| File | Description |
+|------|-------------|
+| `tests/test_status_effects.py` | Tests for status effect system |
+| `tests/test_inventory.py` | Tests for inventory management |
 
 ### UI
 
