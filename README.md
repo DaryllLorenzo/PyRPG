@@ -66,7 +66,63 @@ PyRPG/
 
 ### UI
 
-Empty. Pending implementation.
+Graphical UI using Pygame with animated character sprites.
+
+**Implemented:**
+
+| File | Description |
+|------|-------------|
+| `ui/player.py` | Player character with idle/walk/run animations |
+| `ui/sprite_manager.py` | Sprite sheet loading and frame extraction |
+
+**Assets:**
+
+Sprite assets from [PixelCrawler](ui/assets/PixelCrawler) by Anokolisa.
+
+**Working with PixelCrawler Sprites:**
+
+The PixelCrawler pack uses directional sprite sheets (separate files for each direction):
+- `*_Up-Sheet.png` - Up direction
+- `*_Down-Sheet.png` - Down direction  
+- `*_Side-Sheet.png` - Right direction (automatically flipped for left)
+
+```python
+from ui.sprite_manager import SpriteManager
+from ui.player import Player
+
+# Initialize sprite manager
+sprite_manager = SpriteManager()
+
+# Load Body_A animations (64x64 tiles)
+assets_dir = "ui/assets/PixelCrawler"
+idle = sprite_manager.load_body_a_animation(assets_dir, "Idle_Base", "idle")
+walk = sprite_manager.load_body_a_animation(assets_dir, "Walk_Base", "walk")
+run = sprite_manager.load_body_a_animation(assets_dir, "Run_Base", "run")
+
+# Create player with animations
+player = Player(
+    x=100, y=100,
+    idle_animations=idle,
+    walk_animations=walk,
+    run_animations=run,
+    walk_speed=2,
+    run_speed=4,
+    animation_speed=0.15,
+    scale=2,  # Render scale (64*scale pixels)
+)
+
+# Toggle running with Shift key
+player.set_running(True)  # or False for walking
+```
+
+**Available Body_A Animations:**
+- `Idle_Base` - 4 frames (standing still)
+- `Walk_Base` - 8 frames (walking)
+- `Run_Base` - 6 frames (running)
+
+**Other Character Bodies:** Check `Entities/Characters/` for additional base bodies.
+
+**NPC/Mob Sprites:** The pack also includes pre-made NPCs (Knight, Wizard, Rogue) and Mobs (Orc Crew, Skeleton Crew) in `Entities/Npc's/` and `Entities/Mobs/`.
 
 ## Roadmap
 

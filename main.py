@@ -27,22 +27,35 @@ def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     clock = pygame.time.Clock()
 
-    # Load sprite sheet
-    sprite_dir = Path(__file__).parent / "ui"
-    sprite_path = sprite_dir / "d_knight.png"
+    # Load sprite sheets from PixelCrawler pack
+    assets_dir = Path(__file__).parent / "ui" / "assets" / "PixelCrawler"
+    sprite_manager = SpriteManager()
 
-    sprite_manager = SpriteManager()  # Uses 140x155 default for d_knight.png
-    animations = sprite_manager.load_sprite_sheet(str(sprite_path), "knight")
+    # Load Body_A animations (64x64 tiles)
+    idle = sprite_manager.load_body_a_animation(
+        str(assets_dir), "Idle_Base", "idle"
+    )
+    walk = sprite_manager.load_body_a_animation(
+        str(assets_dir), "Walk_Base", "walk"
+    )
+    run = sprite_manager.load_body_a_animation(
+        str(assets_dir), "Run_Base", "run"
+    )
 
     # Create player (centered on screen)
-    player_x = SCREEN_WIDTH // 2 - 140 // 2
-    player_y = SCREEN_HEIGHT // 2 - 155 // 2
+    sprite_scale = 2
+    player_x = SCREEN_WIDTH // 2 - (64 * sprite_scale) // 2
+    player_y = SCREEN_HEIGHT // 2 - (64 * sprite_scale) // 2
     player = Player(
         x=player_x,
         y=player_y,
-        animations=animations,
-        speed=3,
-        animation_speed=0.2,
+        idle_animations=idle,
+        walk_animations=walk,
+        run_animations=run,
+        walk_speed=2,
+        run_speed=4,
+        animation_speed=0.15,
+        scale=sprite_scale,
     )
 
     # Game loop
@@ -70,6 +83,9 @@ def main():
         elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
             dy = 1
 
+        # Check for running (Shift key)
+        player.set_running(keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
+
         # Update player
         player.move(dx, dy)
 
@@ -77,9 +93,10 @@ def main():
         screen.fill((50, 50, 100))  # Dark blue background
 
         # Draw grid (optional, for visual reference)
-        for x in range(0, SCREEN_WIDTH, 140):
+        grid_size = 32
+        for x in range(0, SCREEN_WIDTH, grid_size):
             pygame.draw.line(screen, (60, 60, 120), (x, 0), (x, SCREEN_HEIGHT))
-        for y in range(0, SCREEN_HEIGHT, 155):
+        for y in range(0, SCREEN_HEIGHT, grid_size):
             pygame.draw.line(screen, (60, 60, 120), (0, y), (SCREEN_WIDTH, y))
 
         # Draw player
@@ -89,6 +106,7 @@ def main():
         font = pygame.font.Font(None, 24)
         instructions = [
             "Arrow keys or WASD to move",
+            "Shift to run",
             "ESC to quit",
         ]
         for i, text in enumerate(instructions):
