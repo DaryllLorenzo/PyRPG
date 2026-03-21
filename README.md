@@ -77,7 +77,7 @@ Graphical UI using Pygame with animated character sprites.
 
 **Assets:**
 
-Sprite assets from [PixelCrawler](ui/assets/PixelCrawler) by Anokolisa.
+Sprite assets from **PixelCrawler - Free Pack** by [Anokolisa](https://anokolisa.itch.io/free-pixel-art-asset-pack-topdown-tileset-rpg-16x16-sprites).
 
 **Working with PixelCrawler Sprites:**
 
