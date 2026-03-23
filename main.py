@@ -9,6 +9,8 @@ from pathlib import Path
 
 from ui.sprite_manager import SpriteManager
 from ui.player import Player
+from ui.npc import NPC
+from ui.collision import resolve_collision
 
 
 # Constants
@@ -56,6 +58,22 @@ def main():
         run_speed=4,
         animation_speed=0.15,
         scale=sprite_scale,
+        hitbox_width=32,
+        hitbox_height=48,
+    )
+
+    # Create NPC (static, same sprite as player)
+    npc_x = player_x + 150
+    npc_y = player_y
+    npc = NPC(
+        x=npc_x,
+        y=npc_y,
+        idle_animations=idle,
+        walk_animations=walk,
+        animation_speed=0.15,
+        scale=sprite_scale,
+        hitbox_width=32,
+        hitbox_height=48,
     )
 
     # Game loop
@@ -86,8 +104,9 @@ def main():
         # Check for running (Shift key)
         player.set_running(keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
 
-        # Update player
-        player.move(dx, dy)
+        # Update player with collision detection
+        blocked_x, blocked_y = resolve_collision(player, npc, dx, dy)
+        player.try_move(dx, dy, blocked_x, blocked_y)
 
         # Draw
         screen.fill((50, 50, 100))  # Dark blue background
@@ -99,8 +118,11 @@ def main():
         for y in range(0, SCREEN_HEIGHT, grid_size):
             pygame.draw.line(screen, (60, 60, 120), (0, y), (SCREEN_WIDTH, y))
 
-        # Draw player
-        player.draw(screen)
+        # Draw entities sorted by Y position (bottom-first for correct overlap)
+        entities = [(player.y, player), (npc.y, npc)]
+        entities.sort(key=lambda e: e[0])
+        for _, entity in entities:
+            entity.draw(screen)
 
         # Draw instructions
         font = pygame.font.Font(None, 24)

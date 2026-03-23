@@ -22,6 +22,10 @@ class Player:
         run_speed: int = 4,
         animation_speed: float = 0.15,
         scale: int = 3,
+        hitbox_width: int = 24,
+        hitbox_height: int = 40,
+        hitbox_offset_x: int = 0,
+        hitbox_offset_y: int = 0,
     ):
         """
         Initialize the player.
@@ -36,6 +40,10 @@ class Player:
             run_speed: Running speed in pixels per frame.
             animation_speed: Animation speed (lower = slower).
             scale: Scale factor for sprite rendering (default: 3).
+            hitbox_width: Width of collision box in pixels.
+            hitbox_height: Height of collision box in pixels.
+            hitbox_offset_x: Horizontal offset from sprite position.
+            hitbox_offset_y: Vertical offset from sprite position.
         """
         self.x = x
         self.y = y
@@ -48,6 +56,10 @@ class Player:
         self.speed = walk_speed
         self.animation_speed = animation_speed
         self.scale = scale
+        self.hitbox_width = hitbox_width
+        self.hitbox_height = hitbox_height
+        self.hitbox_offset_x = hitbox_offset_x
+        self.hitbox_offset_y = hitbox_offset_y
 
         self.direction = "down"
         self.frame_index = 0
@@ -118,6 +130,49 @@ class Player:
             self.animation_counter = 0.0
             self.frame_index = 0
 
+    def try_move(self, dx: int, dy: int, blocked_x: bool, blocked_y: bool) -> None:
+        """
+        Attempt to move the player with collision blocking.
+
+        Args:
+            dx: Intended horizontal movement (-1, 0, 1).
+            dy: Intended vertical movement (-1, 0, 1).
+            blocked_x: If True, horizontal movement is blocked.
+            blocked_y: If True, vertical movement is blocked.
+        """
+        if dx != 0 or dy != 0:
+            # Update direction based on intended movement
+            if dx > 0:
+                self.direction = "right"
+            elif dx < 0:
+                self.direction = "left"
+            elif dy > 0:
+                self.direction = "down"
+            elif dy < 0:
+                self.direction = "up"
+
+            # Apply movement only if not blocked
+            moved = False
+            if not blocked_x:
+                self.x += dx * self.speed
+                moved = True
+            if not blocked_y:
+                self.y += dy * self.speed
+                moved = True
+
+            # Update animation only if actually moved
+            if moved:
+                self._is_moving = True
+                self._update_animation()
+            else:
+                self._is_moving = False
+                self.animation_counter = 0.0
+                self.frame_index = 0
+        else:
+            self._is_moving = False
+            self.animation_counter = 0.0
+            self.frame_index = 0
+
     def _update_animation(self) -> None:
         """Update the current animation frame."""
         self.animation_counter += self.animation_speed
@@ -164,8 +219,12 @@ class Player:
         Returns:
             pygame.Rect representing player's bounding box (scaled).
         """
-        frame = self.get_current_frame()
-        return pygame.Rect(self.x, self.y, frame.get_width(), frame.get_height())
+        return pygame.Rect(
+            self.x + self.hitbox_offset_x,
+            self.y + self.hitbox_offset_y,
+            self.hitbox_width,
+            self.hitbox_height,
+        )
 
     def set_position(self, x: int, y: int) -> None:
         """

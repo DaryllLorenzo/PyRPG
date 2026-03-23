@@ -73,6 +73,8 @@ Graphical UI using Pygame with animated character sprites.
 | File | Description |
 |------|-------------|
 | `ui/player.py` | Player character with idle/walk/run animations |
+| `ui/npc.py` | Non-player characters with idle animations |
+| `ui/collision.py` | Collision detection and resolution utilities |
 | `ui/sprite_manager.py` | Sprite sheet loading and frame extraction |
 
 **Assets:**
@@ -83,12 +85,14 @@ Sprite assets from **PixelCrawler - Free Pack** by [Anokolisa](https://anokolisa
 
 The PixelCrawler pack uses directional sprite sheets (separate files for each direction):
 - `*_Up-Sheet.png` - Up direction
-- `*_Down-Sheet.png` - Down direction  
+- `*_Down-Sheet.png` - Down direction
 - `*_Side-Sheet.png` - Right direction (automatically flipped for left)
 
 ```python
 from ui.sprite_manager import SpriteManager
 from ui.player import Player
+from ui.npc import NPC
+from ui.collision import resolve_collision
 
 # Initialize sprite manager
 sprite_manager = SpriteManager()
@@ -109,10 +113,27 @@ player = Player(
     run_speed=4,
     animation_speed=0.15,
     scale=2,  # Render scale (64*scale pixels)
+    hitbox_width=32,   # Collision box width
+    hitbox_height=48,  # Collision box height
 )
 
 # Toggle running with Shift key
 player.set_running(True)  # or False for walking
+
+# Create static NPC
+npc = NPC(
+    x=250, y=100,
+    idle_animations=idle,
+    walk_animations=walk,
+    scale=2,
+    hitbox_width=32,
+    hitbox_height=48,
+)
+
+# In game loop - handle collision
+dx, dy = 1, 0  # Input direction
+blocked_x, blocked_y = resolve_collision(player, npc, dx, dy)
+player.try_move(dx, dy, blocked_x, blocked_y)
 ```
 
 **Available Body_A Animations:**
@@ -123,6 +144,31 @@ player.set_running(True)  # or False for walking
 **Other Character Bodies:** Check `Entities/Characters/` for additional base bodies.
 
 **NPC/Mob Sprites:** The pack also includes pre-made NPCs (Knight, Wizard, Rogue) and Mobs (Orc Crew, Skeleton Crew) in `Entities/Npc's/` and `Entities/Mobs/`.
+
+### UI Architecture
+
+**Entity Classes (`Player`, `NPC`):**
+- Each entity manages its own animations independently
+- `get_rect()` returns collision box based on configured `hitbox_width`, `hitbox_height`, and offsets
+- `draw()` renders the current animation frame at entity position
+
+**Collision System:**
+- `resolve_collision(player, npc, dx, dy)` - Returns `(blocked_x, blocked_y)` tuple
+- `player.try_move(dx, dy, blocked_x, blocked_y)` - Applies movement with collision blocking
+- Hitboxes are independent per entity (configure via constructor)
+
+**Z-Ordering (Draw Order):**
+- Entities should be sorted by Y position before drawing
+- Entities with higher Y (lower on screen) draw on top
+- Creates correct depth perception when characters overlap
+
+```python
+# Example: Draw multiple entities with correct Z-order
+entities = [player, npc1, npc2]
+entities.sort(key=lambda e: e.y)  # Sort by Y position
+for entity in entities:
+    entity.draw(screen)
+```
 
 ## Roadmap
 
