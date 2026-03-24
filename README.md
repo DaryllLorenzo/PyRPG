@@ -76,6 +76,9 @@ Graphical UI using Pygame with animated character sprites.
 | `ui/npc.py` | Non-player characters with idle animations |
 | `ui/collision.py` | Collision detection and resolution utilities |
 | `ui/sprite_manager.py` | Sprite sheet loading and frame extraction |
+| `ui/camera.py` | Camera system for scrolling and following entities |
+| `ui/tilemap.py` | Tile-based floor map rendering |
+| `ui/triggers.py` | Trigger zones (Unity-style OnTriggerEnter2D) |
 
 **Assets:**
 
@@ -170,6 +173,94 @@ for entity in entities:
     entity.draw(screen)
 ```
 
+### Camera System
+
+The camera follows the player Pokémon-style (always centered):
+
+```python
+from ui.camera import Camera
+
+# Create camera
+camera = Camera(
+    screen_width=640,
+    screen_height=480,
+    map_width=1280,  # Must be larger than screen for scrolling
+    map_height=960,
+)
+
+# Set camera to follow player instantly
+camera.set_smoothing(0.0)  # 0.0 = instant, 1.0 = no movement
+camera.set_target(player)
+
+# In game loop
+camera.update()  # Updates camera position to follow target
+
+# Convert world coordinates to screen coordinates for drawing
+screen_x, screen_y = camera.world_to_screen(entity.x, entity.y)
+entity.draw(screen, draw_x=screen_x, draw_y=screen_y)
+```
+
+**Camera Features:**
+- Instant or smoothed following (configurable)
+- Dead zone support (area where camera doesn't move)
+- Automatic clamping to map bounds
+- World-to-screen and screen-to-world conversion
+
+### TileMap System
+
+Generate procedural floor tiles or load from tilesets:
+
+```python
+from ui.tilemap import TileMap
+
+# Create tilemap
+tilemap = TileMap(tile_size=16, map_width=80, map_height=60)
+
+# Option 1: Generate procedural tiles (no conflicts)
+grass_tile = tilemap.generate_basic_tile("grass", variation=0)
+tilemap.tiles[0] = grass_tile
+tilemap.fill_all(0)
+
+# Option 2: Load from tileset image
+tilemap.load_tileset("path/to/tileset.png", tile_id_start=0)
+
+# Draw with camera scrolling
+tilemap.draw(screen, camera_x=camera.x, camera_y=camera.y)
+```
+
+**Procedural Tile Types:**
+- `grass` - Green with blade details
+- `dirt` - Brown with pebbles
+- `stone` - Gray with texture lines
+- `sand` - Yellow with grain details
+
+### Trigger Zones
+
+Unity-style trigger zones for events and cutscenes:
+
+```python
+from ui.triggers import TriggerZone, TriggerManager
+
+trigger_manager = TriggerManager()
+
+# Create trigger zone
+trigger = TriggerZone(
+    x=100, y=100,
+    width=64, height=64,
+    trigger_id="battle_zone",
+    one_shot=False,  # Set True for one-time events
+)
+
+# Set callbacks
+trigger.on_enter = lambda entity_id: print(f"Entered by {entity_id}")
+trigger.on_exit = lambda entity_id: print(f"Exited by {entity_id}")
+
+trigger_manager.add_trigger(trigger)
+
+# In game loop
+trigger_manager.update_all(player.get_rect(), id(player))
+```
+
 ## Roadmap
 
 ### Phase 1: Core Combat System (Priority: High)
@@ -193,8 +284,10 @@ for entity in entities:
 
 ### Phase 4: UI (Priority: Low)
 
-1. Console-based UI (prototype)
-2. Graphical UI (optional)
+1. ✓ Console-based UI (prototype)
+2. ✓ Graphical UI with camera follow system
+3. ✓ Procedural tile generation
+4. ✓ Trigger zones for events
 
 ## Usage
 
