@@ -117,15 +117,26 @@ class NPC:
         scaled_size = (frame.get_width() * self.scale, frame.get_height() * self.scale)
         return pygame.transform.scale(frame, scaled_size)
 
-    def draw(self, screen: pygame.Surface) -> None:
+    def draw(
+        self,
+        screen: pygame.Surface,
+        draw_x: Optional[int] = None,
+        draw_y: Optional[int] = None,
+    ) -> None:
         """
         Draw the NPC on the screen.
 
         Args:
             screen: Pygame surface to draw on.
+            draw_x: Optional X position for drawing (uses self.x if None).
+            draw_y: Optional Y position for drawing (uses self.y if None).
         """
         frame = self.get_current_frame()
-        screen.blit(frame, (self.x, self.y))
+        draw_pos = (
+            draw_x if draw_x is not None else self.x,
+            draw_y if draw_y is not None else self.y,
+        )
+        screen.blit(frame, draw_pos)
 
     def get_rect(self) -> pygame.Rect:
         """

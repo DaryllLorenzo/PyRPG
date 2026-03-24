@@ -11,12 +11,20 @@ from ui.sprite_manager import SpriteManager
 from ui.player import Player
 from ui.npc import NPC
 from ui.collision import resolve_collision
+from ui.tilemap import TileMap
+from ui.triggers import TriggerZone, TriggerManager
+from ui.camera import Camera
 
 
 # Constants
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
 FPS = 60
+
+# Map settings (PixelCrawler native tile size: 16x16)
+TILE_SIZE = 16
+MAP_WIDTH = 80  # tiles (1280 pixels - larger than screen for camera scrolling)
+MAP_HEIGHT = 60  # tiles (960 pixels - larger than screen for camera scrolling)
 
 
 def main():
@@ -44,27 +52,55 @@ def main():
         str(assets_dir), "Run_Base", "run"
     )
 
-    # Create player (centered on screen)
+    # Create tilemap for floor rendering
+    tilemap = TileMap(tile_size=TILE_SIZE, map_width=MAP_WIDTH, map_height=MAP_HEIGHT)
+
+    # Generate basic grass tile programmatically (avoids tileset clipping conflicts)
+    grass_tile = tilemap.generate_basic_tile("grass", variation=0)
+    tilemap.tiles[0] = grass_tile
+    print("Generated basic grass tile for floor rendering")
+
+    # Fill the entire map with grass tile (tile_id=0)
+    tilemap.fill_all(0)
+
+    # Create camera for scrolling
+    camera = Camera(
+        screen_width=SCREEN_WIDTH,
+        screen_height=SCREEN_HEIGHT,
+        map_width=tilemap.pixel_width,
+        map_height=tilemap.pixel_height,
+    )
+
+    # Create player (starting near center of map)
     sprite_scale = 2
-    player_x = SCREEN_WIDTH // 2 - (64 * sprite_scale) // 2
-    player_y = SCREEN_HEIGHT // 2 - (64 * sprite_scale) // 2
+    player_start_x = tilemap.pixel_width // 2 - (64 * sprite_scale) // 2
+    player_start_y = tilemap.pixel_height // 2 - (64 * sprite_scale) // 2
     player = Player(
-        x=player_x,
-        y=player_y,
+        x=player_start_x,
+        y=player_start_y,
         idle_animations=idle,
         walk_animations=walk,
         run_animations=run,
-        walk_speed=2,
-        run_speed=4,
+        walk_speed=3,
+        run_speed=6,
         animation_speed=0.15,
         scale=sprite_scale,
         hitbox_width=32,
         hitbox_height=48,
+        hitbox_offset_x=16,  # Center the hitbox
+        hitbox_offset_y=16,
     )
 
+    # Set camera to follow player instantly (Pokémon-style: player always centered)
+    camera.set_smoothing(0.0)  # Instant follow, no delay
+    camera.set_target(player)
+    
+    # Force camera to center on player at start
+    camera.update()
+
     # Create NPC (static, same sprite as player)
-    npc_x = player_x + 150
-    npc_y = player_y
+    npc_x = player_start_x + 150
+    npc_y = player_start_y
     npc = NPC(
         x=npc_x,
         y=npc_y,
@@ -74,7 +110,61 @@ def main():
         scale=sprite_scale,
         hitbox_width=32,
         hitbox_height=48,
+        hitbox_offset_x=16,
+        hitbox_offset_y=16,
     )
+
+    # Create trigger zones (replicating Unity's OnTriggerEnter2D)
+    trigger_manager = TriggerManager()
+
+    # Trigger zone 1: Near the starting area
+    trigger1 = TriggerZone(
+        x=player_start_x - 50,
+        y=player_start_y - 50,
+        width=100,
+        height=100,
+        trigger_id="start_area",
+    )
+    trigger1.on_enter = lambda entity_id: print(
+        f"[TRIGGER ENTER] start_area - Entity {entity_id} entered the starting area!"
+    )
+    trigger1.on_exit = lambda entity_id: print(
+        f"[TRIGGER EXIT] start_area - Entity {entity_id} left the starting area!"
+    )
+    trigger_manager.add_trigger(trigger1)
+
+    # Trigger zone 2: Near the NPC
+    trigger2 = TriggerZone(
+        x=npc_x - 40,
+        y=npc_y - 40,
+        width=80,
+        height=80,
+        trigger_id="npc_zone",
+    )
+    trigger2.on_enter = lambda entity_id: print(
+        f"[TRIGGER ENTER] npc_zone - Entity {entity_id} approached the NPC!"
+    )
+    trigger2.on_exit = lambda entity_id: print(
+        f"[TRIGGER EXIT] npc_zone - Entity {entity_id} moved away from the NPC!"
+    )
+    trigger_manager.add_trigger(trigger2)
+
+    # Trigger zone 3: One-shot trigger (fires only once)
+    trigger3 = TriggerZone(
+        x=player_start_x + 200,
+        y=player_start_y,
+        width=64,
+        height=64,
+        trigger_id="one_shot_event",
+        one_shot=True,
+    )
+    trigger3.on_enter = lambda entity_id: print(
+        f"[TRIGGER ENTER] one_shot_event - Entity {entity_id} triggered a one-time event!"
+    )
+    trigger_manager.add_trigger(trigger3)
+
+    # Debug: Show trigger zones
+    show_triggers = True
 
     # Game loop
     running = True
@@ -86,6 +176,10 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                elif event.key == pygame.K_t:
+                    # Toggle trigger visualization
+                    show_triggers = not show_triggers
+                    print(f"Trigger visualization: {'ON' if show_triggers else 'OFF'}")
 
         # Get input
         keys = pygame.key.get_pressed()
@@ -108,32 +202,62 @@ def main():
         blocked_x, blocked_y = resolve_collision(player, npc, dx, dy)
         player.try_move(dx, dy, blocked_x, blocked_y)
 
-        # Draw
-        screen.fill((50, 50, 100))  # Dark blue background
+        # Update camera to follow player
+        camera.update()
 
-        # Draw grid (optional, for visual reference)
-        grid_size = 32
-        for x in range(0, SCREEN_WIDTH, grid_size):
-            pygame.draw.line(screen, (60, 60, 120), (x, 0), (x, SCREEN_HEIGHT))
-        for y in range(0, SCREEN_HEIGHT, grid_size):
-            pygame.draw.line(screen, (60, 60, 120), (0, y), (SCREEN_WIDTH, y))
+        # Check trigger zones
+        # player.get_rect() already returns world coordinates
+        player_rect = player.get_rect()
+        trigger_manager.update_all(player_rect, id(player))
+
+        # Draw
+        screen.fill((50, 50, 100))  # Dark blue background (fallback)
+
+        # Draw tilemap (floor)
+        tilemap.draw(screen, camera_x=camera.x, camera_y=camera.y)
+
+        # Draw trigger zones (debug visualization)
+        if show_triggers:
+            trigger_manager.draw_all(
+                screen,
+                color=(255, 0, 0, 128),
+                width=2,
+                camera_x=camera.x,
+                camera_y=camera.y,
+            )
 
         # Draw entities sorted by Y position (bottom-first for correct overlap)
-        entities = [(player.y, player), (npc.y, npc)]
+        # Convert entity positions to screen coordinates for drawing
+        entities = []
+        for entity in [player, npc]:
+            screen_x, screen_y = camera.world_to_screen(entity.x, entity.y)
+            entities.append((screen_y, entity, screen_x, screen_y))
+
         entities.sort(key=lambda e: e[0])
-        for _, entity in entities:
-            entity.draw(screen)
+        for _, entity, draw_x, draw_y in entities:
+            entity.draw(screen, draw_x=draw_x, draw_y=draw_y)
 
         # Draw instructions
         font = pygame.font.Font(None, 24)
         instructions = [
             "Arrow keys or WASD to move",
             "Shift to run",
+            "T: Toggle trigger visualization",
             "ESC to quit",
         ]
         for i, text in enumerate(instructions):
             text_surface = font.render(text, True, (200, 200, 200))
             screen.blit(text_surface, (10, 10 + i * 20))
+
+        # Draw player position info
+        pos_text = f"Position: ({player.x}, {player.y})"
+        pos_surface = font.render(pos_text, True, (200, 200, 200))
+        screen.blit(pos_surface, (10, SCREEN_HEIGHT - 30))
+
+        # Draw map info
+        map_text = f"Map: {MAP_WIDTH}x{MAP_HEIGHT} tiles ({tilemap.pixel_width}x{tilemap.pixel_height} px)"
+        map_surface = font.render(map_text, True, (200, 200, 200))
+        screen.blit(map_surface, (10, SCREEN_HEIGHT - 50))
 
         # Update display
         pygame.display.flip()

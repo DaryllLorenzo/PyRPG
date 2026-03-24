@@ -42,7 +42,12 @@ class SpriteManager:
         if not image_path.exists():
             raise FileNotFoundError(f"Sprite sheet not found: {path}")
 
-        sheet = pygame.image.load(str(image_path)).convert_alpha()
+        # Load image and convert to surface with alpha channel
+        sheet = pygame.image.load(str(image_path))
+        if sheet.get_alpha() is None:
+            converted = pygame.Surface(sheet.get_size(), pygame.SRCALPHA)
+            converted.blit(sheet, (0, 0))
+            sheet = converted
 
         animations: Dict[str, List[pygame.Surface]] = {
             "up": [],
@@ -140,6 +145,12 @@ class SpriteManager:
                 continue
 
             sheet = pygame.image.load(str(sheet_path))
+            # Convert to surface with alpha channel if needed
+            if sheet.get_alpha() is None:
+                converted = pygame.Surface(sheet.get_size(), pygame.SRCALPHA)
+                converted.blit(sheet, (0, 0))
+                sheet = converted
+
             # Auto-detect tile height from image (assume single row)
             detected_height = sheet.get_height()
             # Auto-detect tile width if not specified (assume square tiles)
