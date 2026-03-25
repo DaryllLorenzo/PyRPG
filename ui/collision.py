@@ -69,9 +69,19 @@ def resolve_collision(
     new_x = player.x + dx * player.speed
     new_y = player.y + dy * player.speed
 
-    # Create test rectangles for each axis
-    test_rect_x = pygame.Rect(new_x, player.y, player_rect.width, player_rect.height)
-    test_rect_y = pygame.Rect(player.x, new_y, player_rect.width, player_rect.height)
+    # Create test rectangles for each axis, preserving hitbox offsets
+    test_rect_x = pygame.Rect(
+        new_x + player.hitbox_offset_x,
+        player.y + player.hitbox_offset_y,
+        player_rect.width,
+        player_rect.height,
+    )
+    test_rect_y = pygame.Rect(
+        player.x + player.hitbox_offset_x,
+        new_y + player.hitbox_offset_y,
+        player_rect.width,
+        player_rect.height,
+    )
 
     npc_rect = npc.get_rect()
 
@@ -105,9 +115,19 @@ def resolve_multiple_collisions(
     new_x = player.x + dx * player.speed
     new_y = player.y + dy * player.speed
 
-    # Create test rectangles for each axis
-    test_rect_x = pygame.Rect(new_x, player.y, player_rect.width, player_rect.height)
-    test_rect_y = pygame.Rect(player.x, new_y, player_rect.width, player_rect.height)
+    # Create test rectangles for each axis, preserving hitbox offsets
+    test_rect_x = pygame.Rect(
+        new_x + player.hitbox_offset_x,
+        player.y + player.hitbox_offset_y,
+        player_rect.width,
+        player_rect.height,
+    )
+    test_rect_y = pygame.Rect(
+        player.x + player.hitbox_offset_x,
+        new_y + player.hitbox_offset_y,
+        player_rect.width,
+        player_rect.height,
+    )
 
     blocked_x = False
     blocked_y = False
