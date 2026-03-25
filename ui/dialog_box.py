@@ -39,8 +39,8 @@ class DialogBox:
         self.screen_width = screen_width
         self.screen_height = screen_height
 
-        # Dialog box dimensions - adjusted for 640x480 screen
-        self.box_height = 120
+        # Dialog box dimensions - adjusted for 800x600 screen
+        self.box_height = 130
         self.border_height = 6
         self.portrait_margin = 12
         self.text_margin = 8
@@ -145,6 +145,10 @@ class DialogBox:
     def is_closed(self) -> bool:
         """Check if the dialog box is fully closed."""
         return not self._is_open and not self._is_animating
+
+    def is_text_complete(self) -> bool:
+        """Check if all text has been displayed."""
+        return self._char_index >= len(self._full_text)
 
     def update(self, dt: int) -> None:
         """

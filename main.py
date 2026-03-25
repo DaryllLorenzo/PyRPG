@@ -18,8 +18,8 @@ from ui.dialog_box import DialogBox
 
 
 # Constants
-SCREEN_WIDTH = 640
-SCREEN_HEIGHT = 480
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
 FPS = 60
 
 # Map settings (PixelCrawler native tile size: 16x16)
@@ -114,7 +114,7 @@ def main():
         hitbox_offset_x=16,
         hitbox_offset_y=16,
         portrait_path=str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"),
-        dialog_text="¡Oye tú! Sí, tú mismo. ¿Qué haces por aquí? Este no es lugar para andar merodeando sin rumbo. ¡Más te vale tener un buen motivo para estar en estas tierras!",
+        dialog_text="¡Oye tú! Sí, tú mismo. ¿Qué haces por aquí? Este no es lugar para andar merodeando sin rumbo. ¡Más te vale tener un buen motivo para estar en estas tierras! y recuerda las 3 R",
         interaction_distance=100,
     )
 
@@ -199,22 +199,26 @@ def main():
                     # Toggle trigger visualization
                     show_triggers = not show_triggers
                     print(f"Trigger visualization: {'ON' if show_triggers else 'OFF'}")
-                elif event.key == pygame.K_q and can_open_dialog and not dialog_active:
-                    # Open dialog with NPC
-                    dialog_active = True
-                    portrait = npc.get_portrait()
-                    if portrait:
-                        dialog_box.load_portrait(str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"))
-                    dialog_box.set_text(npc.dialog_text)
-                    dialog_box.open()
-                    # Make NPC face player
-                    npc.face_player(player.x, player.y)
-                elif event.key == pygame.K_SPACE and dialog_active:
-                    # Advance or close dialog
-                    if not dialog_box.advance_text():
-                        # Text complete, close dialog
-                        dialog_box.close()
-                        dialog_active = False
+                elif event.key == pygame.K_q:
+                    if dialog_active:
+                        # Dialog is open: advance or close
+                        if not dialog_box.is_text_complete():
+                            # Show all text immediately
+                            dialog_box.advance_text()
+                        else:
+                            # Text complete: close dialog
+                            dialog_box.close()
+                            dialog_active = False
+                    elif can_open_dialog:
+                        # Open dialog with NPC
+                        dialog_active = True
+                        portrait = npc.get_portrait()
+                        if portrait:
+                            dialog_box.load_portrait(str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"))
+                        dialog_box.set_text(npc.dialog_text)
+                        dialog_box.open()
+                        # Make NPC face player
+                        npc.face_player(player.x, player.y)
 
         # Update dialog box
         if dialog_active:
@@ -291,8 +295,7 @@ def main():
             "Arrow keys or WASD to move",
             "Shift to run",
             "T: Toggle trigger visualization",
-            "Q: Talk to NPC (when close)",
-            "SPACE: Advance/close dialog",
+            "Q: Talk to NPC / Advance / Close (when close)",
             "ESC to quit",
         ]
         for i, text in enumerate(instructions):
