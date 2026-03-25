@@ -14,6 +14,7 @@ from ui.collision import resolve_collision
 from ui.tilemap import TileMap
 from ui.triggers import TriggerZone, TriggerManager
 from ui.camera import Camera
+from ui.dialog_box import DialogBox
 
 
 # Constants
@@ -94,7 +95,7 @@ def main():
     # Set camera to follow player instantly (Pokémon-style: player always centered)
     camera.set_smoothing(0.0)  # Instant follow, no delay
     camera.set_target(player)
-    
+
     # Force camera to center on player at start
     camera.update()
 
@@ -112,6 +113,9 @@ def main():
         hitbox_height=48,
         hitbox_offset_x=16,
         hitbox_offset_y=16,
+        portrait_path=str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"),
+        dialog_text="¡Oye tú! Sí, tú mismo. ¿Qué haces por aquí? Este no es lugar para andar merodeando sin rumbo. ¡Más te vale tener un buen motivo para estar en estas tierras!",
+        interaction_distance=100,
     )
 
     # Create trigger zones (replicating Unity's OnTriggerEnter2D)
@@ -166,9 +170,24 @@ def main():
     # Debug: Show trigger zones
     show_triggers = True
 
+    # Create dialog box
+    dialog_box = DialogBox(
+        screen_width=SCREEN_WIDTH,
+        screen_height=SCREEN_HEIGHT,
+        portrait_scale=3,
+        animation_speed=0.2,
+    )
+
+    # Dialog state
+    dialog_active = False
+    can_open_dialog = False
+
     # Game loop
     running = True
     while running:
+        # Calculate delta time in milliseconds
+        dt = clock.get_time()
+
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -180,34 +199,58 @@ def main():
                     # Toggle trigger visualization
                     show_triggers = not show_triggers
                     print(f"Trigger visualization: {'ON' if show_triggers else 'OFF'}")
+                elif event.key == pygame.K_q and can_open_dialog and not dialog_active:
+                    # Open dialog with NPC
+                    dialog_active = True
+                    portrait = npc.get_portrait()
+                    if portrait:
+                        dialog_box.load_portrait(str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"))
+                    dialog_box.set_text(npc.dialog_text)
+                    dialog_box.open()
+                    # Make NPC face player
+                    npc.face_player(player.x, player.y)
+                elif event.key == pygame.K_SPACE and dialog_active:
+                    # Advance or close dialog
+                    if not dialog_box.advance_text():
+                        # Text complete, close dialog
+                        dialog_box.close()
+                        dialog_active = False
+
+        # Update dialog box
+        if dialog_active:
+            dialog_box.update(dt)
 
         # Get input
         keys = pygame.key.get_pressed()
         dx = 0
         dy = 0
 
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            dx = -1
-        elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            dx = 1
-        elif keys[pygame.K_UP] or keys[pygame.K_w]:
-            dy = -1
-        elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            dy = 1
+        # Only allow movement when dialog is not active
+        if not dialog_active:
+            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+                dx = -1
+            elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+                dx = 1
+            elif keys[pygame.K_UP] or keys[pygame.K_w]:
+                dy = -1
+            elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
+                dy = 1
 
-        # Check for running (Shift key)
-        player.set_running(keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
+            # Check for running (Shift key)
+            player.set_running(keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
 
-        # Update player with collision detection
-        blocked_x, blocked_y = resolve_collision(player, npc, dx, dy)
-        player.try_move(dx, dy, blocked_x, blocked_y)
+            # Update player with collision detection
+            blocked_x, blocked_y = resolve_collision(player, npc, dx, dy)
+            player.try_move(dx, dy, blocked_x, blocked_y)
 
-        # Update camera to follow player
-        camera.update()
+            # Update camera to follow player
+            camera.update()
+
+        # Check if player can interact with NPC
+        player_rect = player.get_rect()
+        can_open_dialog = npc.can_interact(player.x, player.y, player_rect) and not dialog_active
 
         # Check trigger zones
-        # player.get_rect() already returns world coordinates
-        player_rect = player.get_rect()
         trigger_manager.update_all(player_rect, id(player))
 
         # Draw
@@ -237,17 +280,34 @@ def main():
         for _, entity, draw_x, draw_y in entities:
             entity.draw(screen, draw_x=draw_x, draw_y=draw_y)
 
+        # Draw dialog box (on top of everything)
+        if dialog_active or not dialog_box.is_closed():
+            dialog_box.update(dt)
+            dialog_box.draw(screen)
+
         # Draw instructions
         font = pygame.font.Font(None, 24)
         instructions = [
             "Arrow keys or WASD to move",
             "Shift to run",
             "T: Toggle trigger visualization",
+            "Q: Talk to NPC (when close)",
+            "SPACE: Advance/close dialog",
             "ESC to quit",
         ]
         for i, text in enumerate(instructions):
             text_surface = font.render(text, True, (200, 200, 200))
             screen.blit(text_surface, (10, 10 + i * 20))
+
+        # Draw interaction prompt
+        if can_open_dialog and not dialog_active:
+            prompt_text = "Press Q to talk"
+            prompt_surface = font.render(prompt_text, True, (255, 255, 100))
+            # Position above NPC
+            npc_screen_x, npc_screen_y = camera.world_to_screen(npc.x, npc.y)
+            prompt_x = npc_screen_x + (npc.get_rect().width // 2) - (prompt_surface.get_width() // 2)
+            prompt_y = npc_screen_y - 30
+            screen.blit(prompt_surface, (prompt_x, prompt_y))
 
         # Draw player position info
         pos_text = f"Position: ({player.x}, {player.y})"

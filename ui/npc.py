@@ -6,6 +6,7 @@ Contains the NPC class with sprite animations for non-player characters.
 
 import pygame
 from typing import Dict, List, Optional
+from pathlib import Path
 
 
 class NPC:
@@ -23,6 +24,9 @@ class NPC:
         hitbox_height: int = 40,
         hitbox_offset_x: int = 0,
         hitbox_offset_y: int = 0,
+        portrait_path: Optional[str] = None,
+        dialog_text: Optional[str] = None,
+        interaction_distance: int = 80,
     ):
         """
         Initialize the NPC.
@@ -38,6 +42,9 @@ class NPC:
             hitbox_height: Height of collision box in pixels.
             hitbox_offset_x: Horizontal offset from sprite position.
             hitbox_offset_y: Vertical offset from sprite position.
+            portrait_path: Path to the NPC's portrait image for dialogs.
+            dialog_text: Default dialog text for this NPC.
+            interaction_distance: Maximum distance for player interaction.
         """
         self.x = x
         self.y = y
@@ -57,6 +64,12 @@ class NPC:
 
         self._is_moving = False
         self._idle_frames = self._get_idle_frames()
+
+        # Dialog system
+        self.portrait_path = portrait_path
+        self._portrait: Optional[pygame.Surface] = None
+        self.dialog_text = dialog_text or "..."
+        self.interaction_distance = interaction_distance
 
     def _get_idle_frames(self) -> Dict[str, pygame.Surface]:
         """Get the first frame of each direction for idle state."""
@@ -171,3 +184,68 @@ class NPC:
             Tuple of (x, y) coordinates.
         """
         return (self.x, self.y)
+
+    def get_portrait(self) -> Optional[pygame.Surface]:
+        """
+        Get the NPC's portrait image, loading it if necessary.
+
+        Returns:
+            pygame.Surface of the portrait, or None if not available.
+        """
+        if self._portrait is not None:
+            return self._portrait
+
+        if self.portrait_path:
+            portrait_file = Path(self.portrait_path)
+            if portrait_file.exists():
+                self._portrait = pygame.image.load(str(portrait_file)).convert_alpha()
+                return self._portrait
+
+        return None
+
+    def can_interact(self, player_x: int, player_y: int, player_rect: Optional[pygame.Rect] = None) -> bool:
+        """
+        Check if the player is close enough to interact.
+
+        Args:
+            player_x: Player's X position.
+            player_y: Player's Y position.
+            player_rect: Optional player collision rect for more accurate checking.
+
+        Returns:
+            True if the player is within interaction distance.
+        """
+        if player_rect:
+            # Use rect center for distance calculation
+            player_center_x = player_rect.centerx
+            player_center_y = player_rect.centery
+        else:
+            player_center_x = player_x
+            player_center_y = player_y
+
+        # Calculate NPC center
+        npc_center_x = self.x + self.hitbox_offset_x + self.hitbox_width // 2
+        npc_center_y = self.y + self.hitbox_offset_y + self.hitbox_height // 2
+
+        # Calculate distance
+        dx = player_center_x - npc_center_x
+        dy = player_center_y - npc_center_y
+        distance = (dx * dx + dy * dy) ** 0.5
+
+        return distance <= self.interaction_distance
+
+    def face_player(self, player_x: int, player_y: int) -> None:
+        """
+        Make the NPC face the player.
+
+        Args:
+            player_x: Player's X position.
+            player_y: Player's Y position.
+        """
+        dx = player_x - self.x
+        dy = player_y - self.y
+
+        if abs(dx) > abs(dy):
+            self.direction = "right" if dx > 0 else "left"
+        else:
+            self.direction = "down" if dy > 0 else "up"
