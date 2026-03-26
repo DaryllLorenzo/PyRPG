@@ -118,6 +118,25 @@ def main():
         interaction_distance=100,
     )
 
+    # Create second NPC (test character 2)
+    npc2_x = player_start_x - 150
+    npc2_y = player_start_y + 50
+    npc2 = NPC(
+        x=npc2_x,
+        y=npc2_y,
+        idle_animations=idle,
+        walk_animations=walk,
+        animation_speed=0.15,
+        scale=sprite_scale,
+        hitbox_width=32,
+        hitbox_height=48,
+        hitbox_offset_x=16,
+        hitbox_offset_y=16,
+        portrait_path=str(Path(__file__).parent / "ui" / "assets" / "Gemini_Char.png"),
+        dialog_text="Hola soy personaje de prueba 2",
+        interaction_distance=100,
+    )
+
     # Create trigger zones (replicating Unity's OnTriggerEnter2D)
     trigger_manager = TriggerManager()
 
@@ -209,16 +228,16 @@ def main():
                             # Text complete: close dialog
                             dialog_box.close()
                             dialog_active = False
-                    elif can_open_dialog:
-                        # Open dialog with NPC
+                    elif can_open_dialog and active_npc:
+                        # Open dialog with active NPC
                         dialog_active = True
-                        portrait = npc.get_portrait()
+                        portrait = active_npc.get_portrait()
                         if portrait:
-                            dialog_box.load_portrait(str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"))
-                        dialog_box.set_text(npc.dialog_text)
+                            dialog_box.load_portrait(active_npc.portrait_path)
+                        dialog_box.set_text(active_npc.dialog_text)
                         dialog_box.open()
                         # Make NPC face player
-                        npc.face_player(player.x, player.y)
+                        active_npc.face_player(player.x, player.y)
 
         # Update dialog box
         if dialog_active:
@@ -252,7 +271,17 @@ def main():
 
         # Check if player can interact with NPC
         player_rect = player.get_rect()
-        can_open_dialog = npc.can_interact(player.x, player.y, player_rect) and not dialog_active
+        can_open_dialog = False
+        active_npc = None
+
+        # Check which NPC is closest and in range
+        for current_npc in [npc, npc2]:
+            if current_npc.can_interact(player.x, player.y, player_rect):
+                can_open_dialog = True
+                active_npc = current_npc
+                break
+
+        can_open_dialog = can_open_dialog and not dialog_active
 
         # Check trigger zones
         trigger_manager.update_all(player_rect, id(player))
@@ -276,7 +305,7 @@ def main():
         # Draw entities sorted by Y position (bottom-first for correct overlap)
         # Convert entity positions to screen coordinates for drawing
         entities = []
-        for entity in [player, npc]:
+        for entity in [player, npc, npc2]:
             screen_x, screen_y = camera.world_to_screen(entity.x, entity.y)
             entities.append((screen_y, entity, screen_x, screen_y))
 
@@ -303,12 +332,12 @@ def main():
             screen.blit(text_surface, (10, 10 + i * 20))
 
         # Draw interaction prompt
-        if can_open_dialog and not dialog_active:
+        if can_open_dialog and not dialog_active and active_npc:
             prompt_text = "Press Q to talk"
             prompt_surface = font.render(prompt_text, True, (255, 255, 100))
             # Position above NPC
-            npc_screen_x, npc_screen_y = camera.world_to_screen(npc.x, npc.y)
-            prompt_x = npc_screen_x + (npc.get_rect().width // 2) - (prompt_surface.get_width() // 2)
+            npc_screen_x, npc_screen_y = camera.world_to_screen(active_npc.x, active_npc.y)
+            prompt_x = npc_screen_x + (active_npc.get_rect().width // 2) - (prompt_surface.get_width() // 2)
             prompt_y = npc_screen_y - 30
             screen.blit(prompt_surface, (prompt_x, prompt_y))
 

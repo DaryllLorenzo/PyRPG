@@ -79,6 +79,7 @@ Graphical UI using Pygame with animated character sprites.
 | `ui/camera.py` | Camera system for scrolling and following entities |
 | `ui/tilemap.py` | Tile-based floor map rendering |
 | `ui/triggers.py` | Trigger zones (Unity-style OnTriggerEnter2D) |
+| `ui/dialog_box.py` | NPC dialog box with portrait and typewriter text |
 
 **Assets:**
 
@@ -260,6 +261,49 @@ trigger_manager.add_trigger(trigger)
 # In game loop
 trigger_manager.update_all(player.get_rect(), id(player))
 ```
+
+### Dialog Box
+
+NPC dialog system with portrait and typewriter-style text animation:
+
+```python
+from ui.dialog_box import DialogBox
+
+# Create dialog box
+dialog = DialogBox(
+    screen_width=800,
+    screen_height=600,
+    portrait_path="ui/assets/portraits/npc_knight.png",
+    portrait_scale=3,
+    animation_speed=0.15,
+)
+
+# Set dialog text
+dialog.set_text("Hello traveler! Welcome to our village.")
+
+# In game loop
+dialog.update(dt)  # dt in milliseconds
+dialog.draw(screen)
+
+# Open/close dialog
+dialog.open()   # Slide up animation
+dialog.close()  # Slide down animation
+
+# Check state
+if dialog.is_open():
+    # Advance or skip text
+    if event.type == pygame.KEYDOWN:
+        if not dialog.advance_text():
+            dialog.close()  # Close when text complete
+```
+
+**Features:**
+- Smooth slide up/down open/close animations
+- Typewriter-style text reveal (30ms per character)
+- NPC portrait on the left side
+- Blue decorative borders
+- Auto text wrapping
+- Continue indicator when text is complete
 
 ## Roadmap
 
