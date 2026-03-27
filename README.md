@@ -157,9 +157,39 @@ player.try_move(dx, dy, blocked_x, blocked_y)
 - `draw()` renders the current animation frame at entity position
 
 **Collision System:**
-- `resolve_collision(player, npc, dx, dy)` - Returns `(blocked_x, blocked_y)` tuple
+- `resolve_collision(player, npc, dx, dy)` - Returns `(blocked_x, blocked_y)` tuple for single NPC
+- `resolve_multiple_collisions(player, npcs, dx, dy)` - Returns `(blocked_x, blocked_y)` for multiple NPCs
+- `NPCManager` - Manager class for implicit collision handling with all registered NPCs
 - `player.try_move(dx, dy, blocked_x, blocked_y)` - Applies movement with collision blocking
 - Hitboxes are independent per entity (configure via constructor)
+
+**NPCManager (Recommended for Multiple NPCs):**
+
+```python
+from ui.collision import NPCManager
+
+# Create manager (handles collision tracking automatically)
+npc_manager = NPCManager()
+
+# Create NPCs - they are automatically registered for collision
+npc = npc_manager.create_npc(NPC(x=250, y=100, ...))
+npc2 = npc_manager.create_npc(NPC(x=350, y=200, ...))
+
+# In game loop - resolve collision with ALL NPCs in one call
+blocked_x, blocked_y = npc_manager.resolve_collisions(player, dx, dy)
+player.try_move(dx, dy, blocked_x, blocked_y)
+
+# Get interactable NPC (closest one in range)
+active_npc = npc_manager.get_interactable_npc(player)
+if active_npc:
+    # Open dialog or interact
+
+# Draw all NPCs with correct Z-order
+entities = [player] + npc_manager.get_all_npcs()
+entities.sort(key=lambda e: e.y)
+for entity in entities:
+    entity.draw(screen)
+```
 
 **Z-Ordering (Draw Order):**
 - Entities should be sorted by Y position before drawing

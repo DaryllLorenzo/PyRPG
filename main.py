@@ -10,7 +10,7 @@ from pathlib import Path
 from ui.sprite_manager import SpriteManager
 from ui.player import Player
 from ui.npc import NPC
-from ui.collision import resolve_collision
+from ui.collision import NPCManager
 from ui.tilemap import TileMap
 from ui.triggers import TriggerZone, TriggerManager
 from ui.camera import Camera
@@ -99,42 +99,49 @@ def main():
     # Force camera to center on player at start
     camera.update()
 
+    # Create NPC manager (handles collision implicitly for all NPCs)
+    npc_manager = NPCManager()
+
     # Create NPC (static, same sprite as player)
     npc_x = player_start_x + 150
     npc_y = player_start_y
-    npc = NPC(
-        x=npc_x,
-        y=npc_y,
-        idle_animations=idle,
-        walk_animations=walk,
-        animation_speed=0.15,
-        scale=sprite_scale,
-        hitbox_width=32,
-        hitbox_height=48,
-        hitbox_offset_x=16,
-        hitbox_offset_y=16,
-        portrait_path=str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"),
-        dialog_text="¡Oye tú! Sí, tú mismo. ¿Qué haces por aquí? Este no es lugar para andar merodeando sin rumbo. ¡Más te vale tener un buen motivo para estar en estas tierras! y recuerda las 3 R",
-        interaction_distance=100,
+    npc = npc_manager.create_npc(
+        NPC(
+            x=npc_x,
+            y=npc_y,
+            idle_animations=idle,
+            walk_animations=walk,
+            animation_speed=0.15,
+            scale=sprite_scale,
+            hitbox_width=32,
+            hitbox_height=48,
+            hitbox_offset_x=16,
+            hitbox_offset_y=16,
+            portrait_path=str(Path(__file__).parent / "ui" / "assets" / "elvigio_molesto.png"),
+            dialog_text="¡Oye tú! Sí, tú mismo. ¿Qué haces por aquí? Este no es lugar para andar merodeando sin rumbo. ¡Más te vale tener un buen motivo para estar en estas tierras! y recuerda las 3 R",
+            interaction_distance=100,
+        )
     )
 
     # Create second NPC (test character 2)
     npc2_x = player_start_x - 150
     npc2_y = player_start_y + 50
-    npc2 = NPC(
-        x=npc2_x,
-        y=npc2_y,
-        idle_animations=idle,
-        walk_animations=walk,
-        animation_speed=0.15,
-        scale=sprite_scale,
-        hitbox_width=32,
-        hitbox_height=48,
-        hitbox_offset_x=16,
-        hitbox_offset_y=16,
-        portrait_path=str(Path(__file__).parent / "ui" / "assets" / "Gemini_Char.png"),
-        dialog_text="Hola soy personaje de prueba 2",
-        interaction_distance=100,
+    npc2 = npc_manager.create_npc(
+        NPC(
+            x=npc2_x,
+            y=npc2_y,
+            idle_animations=idle,
+            walk_animations=walk,
+            animation_speed=0.15,
+            scale=sprite_scale,
+            hitbox_width=32,
+            hitbox_height=48,
+            hitbox_offset_x=16,
+            hitbox_offset_y=16,
+            portrait_path=str(Path(__file__).parent / "ui" / "assets" / "anibal_pixel_ok.jpg"),
+            dialog_text="Hola soy personaje de prueba 2",
+            interaction_distance=100,
+        )
     )
 
     # Create trigger zones (replicating Unity's OnTriggerEnter2D)
@@ -262,26 +269,17 @@ def main():
             # Check for running (Shift key)
             player.set_running(keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
 
-            # Update player with collision detection
-            blocked_x, blocked_y = resolve_collision(player, npc, dx, dy)
+            # Update player with collision detection (all NPCs handled by manager)
+            blocked_x, blocked_y = npc_manager.resolve_collisions(player, dx, dy)
             player.try_move(dx, dy, blocked_x, blocked_y)
 
             # Update camera to follow player
             camera.update()
 
-        # Check if player can interact with NPC
+        # Check if player can interact with NPC (using manager)
         player_rect = player.get_rect()
-        can_open_dialog = False
-        active_npc = None
-
-        # Check which NPC is closest and in range
-        for current_npc in [npc, npc2]:
-            if current_npc.can_interact(player.x, player.y, player_rect):
-                can_open_dialog = True
-                active_npc = current_npc
-                break
-
-        can_open_dialog = can_open_dialog and not dialog_active
+        active_npc = npc_manager.get_interactable_npc(player)
+        can_open_dialog = active_npc is not None and not dialog_active
 
         # Check trigger zones
         trigger_manager.update_all(player_rect, id(player))
@@ -305,7 +303,7 @@ def main():
         # Draw entities sorted by Y position (bottom-first for correct overlap)
         # Convert entity positions to screen coordinates for drawing
         entities = []
-        for entity in [player, npc, npc2]:
+        for entity in [player] + npc_manager.get_all_npcs():
             screen_x, screen_y = camera.world_to_screen(entity.x, entity.y)
             entities.append((screen_y, entity, screen_x, screen_y))
 

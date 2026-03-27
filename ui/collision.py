@@ -5,7 +5,11 @@ Provides utilities for detecting and resolving collisions between game entities.
 """
 
 import pygame
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.npc import NPC
+    from ui.player import Player
 
 
 def check_collision(rect1: pygame.Rect, rect2: pygame.Rect) -> bool:
@@ -175,3 +179,117 @@ def get_collision_direction(player_rect: pygame.Rect, npc_rect: pygame.Rect) -> 
         return "right" if dx > 0 else "left"
     else:
         return "bottom" if dy > 0 else "top"
+
+
+class NPCManager:
+    """
+    Manager for NPCs with implicit collision handling.
+    
+    This class simplifies NPC creation and collision detection by
+    automatically tracking all NPCs and providing a single method
+    to resolve collisions against all of them.
+    """
+
+    def __init__(self):
+        """Initialize the NPC manager."""
+        self._npcs: List["NPC"] = []
+
+    def create_npc(self, npc: "NPC") -> "NPC":
+        """
+        Create and register an NPC with collision tracking.
+        
+        Args:
+            npc: The NPC instance to register.
+            
+        Returns:
+            The same NPC instance for chaining.
+        """
+        self._npcs.append(npc)
+        return npc
+
+    def create_npc_from_params(self, **npc_kwargs) -> "NPC":
+        """
+        Create an NPC from parameters and register it with collision tracking.
+        
+        Args:
+            **npc_kwargs: Keyword arguments for NPC constructor.
+            
+        Returns:
+            The created NPC instance.
+        """
+        from ui.npc import NPC
+        npc = NPC(**npc_kwargs)
+        self._npcs.append(npc)
+        return npc
+
+    def get_all_npcs(self) -> List["NPC"]:
+        """
+        Get all registered NPCs.
+        
+        Returns:
+            List of all NPCs.
+        """
+        return self._npcs.copy()
+
+    def resolve_collisions(
+        self,
+        player: "Player",
+        dx: int,
+        dy: int,
+    ) -> Tuple[bool, bool]:
+        """
+        Resolve collisions between player and all registered NPCs.
+        
+        Args:
+            player: Player object with get_rect() and x, y attributes.
+            dx: Intended horizontal movement (-1, 0, 1).
+            dy: Intended vertical movement (-1, 0, 1).
+            
+        Returns:
+            Tuple of (blocked_x, blocked_y) where True means movement is blocked.
+        """
+        if not self._npcs:
+            return False, False
+        
+        return resolve_multiple_collisions(player, self._npcs, dx, dy)
+
+    def get_interactable_npc(
+        self,
+        player: "Player",
+    ) -> Optional["NPC"]:
+        """
+        Get the closest NPC that the player can interact with.
+        
+        Args:
+            player: Player object to check interaction from.
+            
+        Returns:
+            The closest interactable NPC, or None if none are in range.
+        """
+        player_rect = player.get_rect()
+        
+        for npc in self._npcs:
+            if npc.can_interact(player.x, player.y, player_rect):
+                return npc
+        
+        return None
+
+    def remove_npc(self, npc: "NPC") -> bool:
+        """
+        Remove an NPC from collision tracking.
+        
+        Args:
+            npc: The NPC to remove.
+            
+        Returns:
+            True if the NPC was removed, False if not found.
+        """
+        try:
+            self._npcs.remove(npc)
+            return True
+        except ValueError:
+            return False
+
+    def clear(self) -> None:
+        """Remove all NPCs from tracking."""
+        self._npcs.clear()
